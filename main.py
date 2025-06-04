@@ -1,9 +1,9 @@
-# main.py - Backend FastAPI para Plataforma de Recetas
+# main.py - Backend FastAPI para Plataforma de Recetas CORREGIDO
 
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_database_url, Column, Integer, String, Text, DateTime, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel, validator
@@ -328,7 +328,7 @@ async def upload_image(image: UploadFile = File(...)):
         )
     
     # Validar tamaño (5MB máximo)
-    if image.size > 5 * 1024 * 1024:
+    if image.size and image.size > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Archivo demasiado grande. Máximo 5MB")
     
     try:
@@ -384,39 +384,6 @@ async def get_stats(db: Session = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"Error getting stats: {e}")
-        raise HTTPException(status_code=500, detail="Error interno del servidor")
-
-# Endpoint para restaurar receta eliminada
-@app.patch("/api/recipes/{recipe_id}/restore")
-async def restore_recipe(recipe_id: int, db: Session = Depends(get_db)):
-    """Restaurar una receta eliminada"""
-    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Receta no encontrada")
-    
-    if recipe.is_deleted == "false":
-        raise HTTPException(status_code=400, detail="La receta no está eliminada")
-    
-    try:
-        recipe.is_deleted = "false"
-        recipe.updated_at = datetime.utcnow()
-        db.commit()
-        logger.info(f"Receta restaurada: {recipe_id}")
-        return {"message": "Receta restaurada exitosamente"}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error restoring recipe: {e}")
-        raise HTTPException(status_code=500, detail="Error interno del servidor")
-
-# Endpoint para obtener recetas eliminadas (historial)
-@app.get("/api/recipes/deleted", response_model=List[RecipeResponse])
-async def get_deleted_recipes(db: Session = Depends(get_db)):
-    """Obtener historial de recetas eliminadas"""
-    try:
-        deleted_recipes = db.query(Recipe).filter(Recipe.is_deleted == "true").all()
-        return deleted_recipes
-    except Exception as e:
-        logger.error(f"Error getting deleted recipes: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 # Manejo de errores
